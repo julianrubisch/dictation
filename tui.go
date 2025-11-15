@@ -65,6 +65,8 @@ var (
 			Border(lipgloss.NormalBorder()).
 			BorderTop(true).
 			BorderBottom(true).
+			BorderLeft(false).
+			BorderRight(false).
 			BorderForeground(lipgloss.Color("6")).  // Turquoise border
 			Foreground(lipgloss.Color("15")).       // White text
 			Bold(true).
@@ -125,16 +127,17 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.height = msg.Height
 		
 		if !m.ready {
-			// Initialize viewport with space for title bar
-			headerHeight := 1
+			// Initialize viewport with space for title bar (border takes 2 lines: top + bottom)
+			headerHeight := 3  // Title bar with top border, content, bottom border
 			footerHeight := 0
 			m.viewport = viewport.New(msg.Width, msg.Height-headerHeight-footerHeight)
 			m.viewport.YPosition = headerHeight
 			m.ready = true
 			m.updateViewportContent()
 		} else {
+			// Reserve space for title bar with borders (top + bottom = 2 extra lines)
 			m.viewport.Width = msg.Width
-			m.viewport.Height = msg.Height - 1 // Reserve space for title bar
+			m.viewport.Height = msg.Height - 3 // Title bar with borders
 		}
 		return m, nil
 		
@@ -229,10 +232,9 @@ func (m appModel) View() string {
 	
 	var s strings.Builder
 	
-	// Title bar
+	// Title bar (includes borders)
 	titleBar := m.renderTitleBar()
 	s.WriteString(titleBar)
-	s.WriteString("\n")
 	
 	// Content area (viewport)
 	content := m.viewport.View()
@@ -272,6 +274,7 @@ func (m appModel) renderTitleBar() string {
 		},
 	})
 	
+	// Render with full width to ensure borders extend across
 	return titleBarStyle.Width(m.width).Render("🔊 " + progressMsg)
 }
 
