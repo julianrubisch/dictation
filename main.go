@@ -276,56 +276,59 @@ func main() {
 	// Track progress
 	correctCount := 0
 	totalAttempts := 0
+	wordsRemaining := len(words)
 
-	// Practice each word - range loop iterates over slice
-	// i is index, word is value
-	for i, word := range words {
-		attempt := 1
-		correct := false
+	// Practice words using a queue approach
+	// When a word is incorrect, it's added back to the end of the queue
+	// This gives students a break and lets them practice other words first
+	for i := 0; i < len(words); i++ {
+		word := words[i]
+		totalAttempts++
 
-		// Keep trying until user gets it right
-		for !correct {
-			totalAttempts++
+		// Speak the word using TTS
+		fmt.Printf("\n🔊 Speaking word %d of %d...\n", i+1, wordsRemaining)
+		if err := speakWord(word); err != nil {
+			// log.Printf doesn't exit, just logs warning
+			log.Printf("Warning: Failed to speak word: %v", err)
+		}
 
-			// Speak the word using TTS
-			fmt.Printf("\n🔊 Speaking word %d of %d...\n", i+1, len(words))
-			if err := speakWord(word); err != nil {
-				// log.Printf doesn't exit, just logs warning
-				log.Printf("Warning: Failed to speak word: %v", err)
-			}
+		// Small delay to let TTS finish speaking
+		time.Sleep(500 * time.Millisecond)
 
-			// Small delay to let TTS finish speaking
-			time.Sleep(500 * time.Millisecond)
+		// Prompt user for input
+		// Note: attempt number is always 1 since we don't retry immediately
+		userInput, err := promptWord(word, 1)
+		if err != nil {
+			log.Fatalf("Error getting input: %v", err)
+		}
 
-			// Prompt user for input
-			userInput, err := promptWord(word, attempt)
-			if err != nil {
-				log.Fatalf("Error getting input: %v", err)
-			}
-
-			// Check if correct (case-sensitive comparison)
-			// German requires proper capitalization (nouns are capitalized)
-			// Direct string comparison ensures exact match including case
-			if userInput == word {
-				fmt.Println("✅ Correct! Well done!")
-				correct = true
-				correctCount++
-			} else {
-				// Show colorful feedback with visual diff to help learning
-				fmt.Println(errorStyle.Render("❌ Incorrect spelling!"))
-				fmt.Println(formatWordDiff(userInput, word))
-				fmt.Print("\n")  // Empty line for readability
-				attempt++
-			}
+		// Check if correct (case-sensitive comparison)
+		// German requires proper capitalization (nouns are capitalized)
+		// Direct string comparison ensures exact match including case
+		if userInput == word {
+			fmt.Println("✅ Correct! Well done!")
+			correctCount++
+			wordsRemaining--
+		} else {
+			// Show colorful feedback with visual diff to help learning
+			fmt.Println(errorStyle.Render("❌ Incorrect spelling!"))
+			fmt.Println(formatWordDiff(userInput, word))
+			fmt.Print("\n")  // Empty line for readability
+			
+			// Add the word back to the end of the queue
+			// This allows the student to practice other words first
+			// and come back to this one later
+			words = append(words, word)
+			wordsRemaining++
 		}
 	}
 
 	// Print summary statistics
 	fmt.Println("\n" + strings.Repeat("=", 30))
 	fmt.Println("🎉 Practice Complete!")
-	fmt.Printf("Words practiced: %d\n", len(words))
+	fmt.Printf("Words practiced: %d\n", correctCount)
 	fmt.Printf("Total attempts: %d\n", totalAttempts)
 	// Calculate accuracy percentage
-	fmt.Printf("Accuracy: %.1f%%\n", float64(len(words))/float64(totalAttempts)*100)
+	fmt.Printf("Accuracy: %.1f%%\n", float64(correctCount)/float64(totalAttempts)*100)
 	fmt.Println(strings.Repeat("=", 30))
 }
