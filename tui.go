@@ -62,8 +62,11 @@ type appModel struct {
 // Styles for the TUI
 var (
 	titleBarStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("15")).  // White
-			Background(lipgloss.Color("6")).   // Turquoise
+			Border(lipgloss.NormalBorder()).
+			BorderTop(true).
+			BorderBottom(true).
+			BorderForeground(lipgloss.Color("6")).  // Turquoise border
+			Foreground(lipgloss.Color("15")).       // White text
 			Bold(true).
 			Padding(0, 1)
 	
@@ -253,14 +256,10 @@ func (m appModel) View() string {
 // renderTitleBar renders the title bar with progress information
 func (m appModel) renderTitleBar() string {
 	wordsList := strings.Join(m.correctWords, ", ")
-	// Use a different color for words in title bar (white or light color on turquoise background)
+	// Use turquoise for words since we now have a border instead of background
 	coloredWordsList := ""
 	if wordsList != "" {
-		// Use white/light color for words in title bar since background is turquoise
-		titleBarWordsStyle := lipgloss.NewStyle().
-			Foreground(lipgloss.Color("15")).  // White
-			Bold(true)
-		coloredWordsList = titleBarWordsStyle.Render(wordsList)
+		coloredWordsList = turquoiseStyle.Render(wordsList)
 	}
 	
 	progressMsg, _ := m.localizer.Localize(&i18n.LocalizeConfig{
