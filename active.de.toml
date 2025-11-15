@@ -7,16 +7,16 @@ other = "Diktat-Übung"
 other = "============================"
 
 [PracticeInstructions]
-other = "Sie werden {{.Count}} Wort/Wörter üben."
+other = "Du wirst {{.Count}} Wörter üben."
 
 [PressEnter]
-other = "Hören Sie genau zu und schreiben Sie jedes Wort richtig.\nDrücken Sie Enter nach jedem Wort."
+other = "Höre genau zu und schreibe jedes Wort richtig.\nDrücke Enter nach jedem Wort."
 
 [WordPrompt]
-other = "Wort {{.Number}}: Schreiben Sie, was Sie gehört haben"
+other = "Wort {{.Number}}: Schreibe, was du gehört hast"
 
 [WordPromptRetry]
-other = "Wort {{.Number}}: Versuchen Sie es erneut (Versuch {{.Attempt}})"
+other = "Wort {{.Number}}: Versuche es erneut (Versuch {{.Attempt}})"
 
 [Correct]
 other = "✅ Richtig! Gut gemacht!"
@@ -37,7 +37,7 @@ other = "Gesamtversuche: {{.Count}}"
 other = "Genauigkeit: {{.Percent}}%"
 
 [YourInput]
-other = "Ihre Eingabe:"
+other = "Deine Eingabe:"
 
 [CorrectLabel]
 other = "Richtig:"
@@ -46,10 +46,10 @@ other = "Richtig:"
 other = "Unterschiede:"
 
 [Placeholder]
-other = "Geben Sie das Wort hier ein..."
+other = "Gebe das Wort hier ein..."
 
 [ValidationError]
-other = "Bitte geben Sie ein Wort ein"
+other = "Bitte gib ein Wort ein"
 
 [ProgressMessage]
 other = "Wort {{.Current}}: {{.Completed}} von {{.Total}} richtig geschrieben"

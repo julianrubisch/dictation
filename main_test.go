@@ -3,7 +3,21 @@ package main
 import (
 	"strings"
 	"testing"
+
+	"github.com/nicksnyder/go-i18n/v2/i18n"
 )
+
+// setupTestLocalizer creates a localizer for testing
+// This is a helper function to avoid repeating i18n setup in each test
+func setupTestLocalizer() *i18n.Localizer {
+	localizer, err := initI18n("en")
+	if err != nil {
+		// If i18n setup fails in tests, create a minimal localizer
+		// This shouldn't happen, but provides a fallback
+		return nil
+	}
+	return localizer
+}
 
 // TestFormatWordDiff tests the word diff visualization function
 // This demonstrates Go's testing package and table-driven tests
@@ -106,12 +120,18 @@ func TestFormatWordDiff(t *testing.T) {
 		},
 	}
 
+	// Set up localizer for tests
+	localizer := setupTestLocalizer()
+	if localizer == nil {
+		t.Fatal("Failed to set up test localizer")
+	}
+
 	// Run each test case
 	for _, tt := range tests {
 		// t.Run creates a subtest for each case
 		// This allows running tests individually and better error reporting
 		t.Run(tt.name, func(t *testing.T) {
-			got := formatWordDiff(tt.userInput, tt.correctWord)
+			got := formatWordDiff(tt.userInput, tt.correctWord, localizer)
 
 			// Check that output contains expected substrings
 			for _, want := range tt.wantContains {
@@ -131,9 +151,14 @@ func TestFormatWordDiff(t *testing.T) {
 
 // TestFormatWordDiffSpecificCases tests specific diff scenarios
 func TestFormatWordDiffSpecificCases(t *testing.T) {
+	localizer := setupTestLocalizer()
+	if localizer == nil {
+		t.Fatal("Failed to set up test localizer")
+	}
+
 	t.Run("shows differences correctly", func(t *testing.T) {
 		// Test that differences are marked with ^
-		result := formatWordDiff("Hau", "Haus")
+		result := formatWordDiff("Hau", "Haus", localizer)
 		
 		// Should show the missing 's'
 		if !strings.Contains(result, "Hau") {
@@ -148,7 +173,7 @@ func TestFormatWordDiffSpecificCases(t *testing.T) {
 	})
 
 	t.Run("handles empty input", func(t *testing.T) {
-		result := formatWordDiff("", "Haus")
+		result := formatWordDiff("", "Haus", localizer)
 		
 		if !strings.Contains(result, "Haus") {
 			t.Error("Should show correct word when input is empty")
@@ -159,7 +184,7 @@ func TestFormatWordDiffSpecificCases(t *testing.T) {
 	})
 
 	t.Run("handles longer input than correct", func(t *testing.T) {
-		result := formatWordDiff("Hausse", "Haus")
+		result := formatWordDiff("Hausse", "Haus", localizer)
 		
 		if !strings.Contains(result, "Hausse") {
 			t.Error("Should show full user input")
@@ -171,7 +196,7 @@ func TestFormatWordDiffSpecificCases(t *testing.T) {
 
 	t.Run("case sensitivity - lowercase vs uppercase", func(t *testing.T) {
 		// Case differences should be marked as different
-		result := formatWordDiff("haus", "Haus")
+		result := formatWordDiff("haus", "Haus", localizer)
 		
 		if !strings.Contains(result, "Differences:") {
 			t.Error("Case differences should be marked")
@@ -186,7 +211,7 @@ func TestFormatWordDiffSpecificCases(t *testing.T) {
 	})
 
 	t.Run("case sensitivity - all lowercase vs all uppercase", func(t *testing.T) {
-		result := formatWordDiff("HAUS", "Haus")
+		result := formatWordDiff("HAUS", "Haus", localizer)
 		
 		if !strings.Contains(result, "Differences:") {
 			t.Error("Case differences should be marked")
