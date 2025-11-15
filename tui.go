@@ -230,15 +230,32 @@ func (m appModel) View() string {
 		return "Initializing..."
 	}
 	
-	// If dialog is showing, display it centered (simpler approach)
+	// If dialog is showing, show title bar + centered dialog
+	// (Keep title bar visible for context, dialog replaces viewport)
 	if m.dialogState == dialogShowing {
+		var s strings.Builder
+		
+		// Show title bar for context
+		titleBar := m.renderTitleBar()
+		s.WriteString(titleBar)
+		
+		// Calculate remaining height for dialog (after title bar)
+		titleBarHeight := strings.Count(titleBar, "\n") + 1
+		remainingHeight := m.height - titleBarHeight
+		if remainingHeight < 0 {
+			remainingHeight = m.height
+		}
+		
+		// Center dialog in remaining space
 		dialog := m.renderDialog()
-		// Center the dialog on screen
-		return lipgloss.Place(
-			m.width, m.height,
+		centeredDialog := lipgloss.Place(
+			m.width, remainingHeight,
 			lipgloss.Center, lipgloss.Center,
 			dialog,
 		)
+		s.WriteString(centeredDialog)
+		
+		return s.String()
 	}
 	
 	// Normal view: title bar + viewport
