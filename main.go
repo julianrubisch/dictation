@@ -2,11 +2,14 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"math/rand"
 	"os"
 	"os/exec"
+	"strings"
 	"time"
 
+	"github.com/charmbracelet/huh"
 	"gopkg.in/yaml.v3"
 )
 
@@ -85,4 +88,123 @@ func speakWord(word string) error {
 		return cmd.Run()
 	}
 	return nil
+}
+
+// promptWord prompts the user to type a word and validates it
+// This uses the Huh library for beautiful terminal prompts
+func promptWord(word string, attempt int) (string, error) {
+	var input string  // Variable to store user input
+
+	// Build prompt title based on attempt number
+	title := fmt.Sprintf("Word %d: Type what you heard", attempt)
+	if attempt > 1 {
+		title = fmt.Sprintf("Word %d: Try again (attempt %d)", attempt, attempt)
+	}
+
+	// Huh provides a fluent API for building forms
+	// NewInput() creates a text input field
+	// Value(&input) binds the input to our variable (pointer needed)
+	// Validate() adds custom validation logic
+	err := huh.NewInput().
+		Title(title).
+		Placeholder("Type the word here...").
+		Value(&input).  // & gets address of input variable
+		Validate(func(s string) error {
+			// Anonymous function for validation
+			// Returns error if validation fails, nil if OK
+			if strings.TrimSpace(s) == "" {
+				return fmt.Errorf("please enter a word")
+			}
+			return nil
+		}).
+		Run()  // Run() blocks until user submits
+
+	if err != nil {
+		return "", err
+	}
+
+	// Trim whitespace and return
+	return strings.TrimSpace(input), nil
+}
+
+func main() {
+	// main() is the entry point of every Go program
+	// os.Args contains command-line arguments
+	// os.Args[0] is the program name, os.Args[1:] are arguments
+	
+	// Default config file path
+	configFile := "config.yaml"
+	if len(os.Args) > 1 {
+		configFile = os.Args[1]  // Use first argument as config file
+	}
+
+	// Load configuration - handle errors with log.Fatalf
+	// Fatalf prints error and exits program (os.Exit(1))
+	config, err := loadConfig(configFile)
+	if err != nil {
+		log.Fatalf("Error loading config: %v", err)
+	}
+
+	// Shuffle words for variety in practice sessions
+	words := shuffleWords(config.Words)
+
+	// Print welcome message
+	fmt.Println("🎯 German Dictation Practice")
+	fmt.Println("============================")
+	fmt.Printf("You will practice %d word(s).\n\n", len(words))
+	fmt.Println("Listen carefully to each word and type it correctly.")
+	fmt.Println("Press Enter after typing each word.\n")
+
+	// Track progress
+	correctCount := 0
+	totalAttempts := 0
+
+	// Practice each word - range loop iterates over slice
+	// i is index, word is value
+	for i, word := range words {
+		attempt := 1
+		correct := false
+
+		// Keep trying until user gets it right
+		for !correct {
+			totalAttempts++
+
+			// Speak the word using TTS
+			fmt.Printf("\n🔊 Speaking word %d of %d...\n", i+1, len(words))
+			if err := speakWord(word); err != nil {
+				// log.Printf doesn't exit, just logs warning
+				log.Printf("Warning: Failed to speak word: %v", err)
+			}
+
+			// Small delay to let TTS finish speaking
+			time.Sleep(500 * time.Millisecond)
+
+			// Prompt user for input
+			userInput, err := promptWord(word, attempt)
+			if err != nil {
+				log.Fatalf("Error getting input: %v", err)
+			}
+
+			// Check if correct (case-insensitive comparison)
+			// strings.EqualFold compares ignoring case
+			if strings.EqualFold(userInput, word) {
+				fmt.Println("✅ Correct! Well done!")
+				correct = true
+				correctCount++
+			} else {
+				// Show feedback and increment attempt counter
+				fmt.Printf("❌ Incorrect. You typed: '%s', but the correct word is: '%s'\n", userInput, word)
+				attempt++
+			}
+		}
+	}
+
+	// Print summary statistics
+	fmt.Println("\n" + strings.Repeat("=", 30))
+	fmt.Println("🎉 Practice Complete!")
+	fmt.Printf("Words practiced: %d\n", len(words))
+	fmt.Printf("Total attempts: %d\n", totalAttempts)
+	// Calculate accuracy percentage
+	fmt.Printf("Accuracy: %.1f%%\n", float64(len(words))/float64(totalAttempts)*100)
+	fmt.Println(strings.Repeat("=", 30))
 }
