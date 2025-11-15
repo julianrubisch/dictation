@@ -56,7 +56,7 @@ func TestFormatWordDiff(t *testing.T) {
 			},
 		},
 		{
-			name:        "case difference - should show as different",
+			name:        "case difference - lowercase vs capitalized (German noun)",
 			userInput:   "haus",
 			correctWord: "Haus",
 			wantContains: []string{
@@ -66,7 +66,7 @@ func TestFormatWordDiff(t *testing.T) {
 			},
 		},
 		{
-			name:        "case difference - first letter",
+			name:        "case difference - capitalized vs lowercase",
 			userInput:   "Haus",
 			correctWord: "haus",
 			wantContains: []string{

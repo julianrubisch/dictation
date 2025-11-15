@@ -303,9 +303,10 @@ func main() {
 				log.Fatalf("Error getting input: %v", err)
 			}
 
-			// Check if correct (case-insensitive comparison)
-			// strings.EqualFold compares ignoring case
-			if strings.EqualFold(userInput, word) {
+			// Check if correct (case-sensitive comparison)
+			// German requires proper capitalization (nouns are capitalized)
+			// Direct string comparison ensures exact match including case
+			if userInput == word {
 				fmt.Println("✅ Correct! Well done!")
 				correct = true
 				correctCount++
