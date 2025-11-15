@@ -141,6 +141,10 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		
 	case speakWordMsg:
 		// Word spoken, now show input
+		// Ensure currentWord is still set (it should be, but double-check)
+		if m.currentWord == "" && m.wordIndex < len(m.words) {
+			m.currentWord = m.words[m.wordIndex]
+		}
 		m.waitingForAudio = false
 		m.showInput = true
 		m.updateViewportContent()
@@ -351,19 +355,26 @@ func (m *appModel) updateViewportContent() {
 // validateInput validates the user input and shows feedback
 func (m *appModel) validateInput(input string) (tea.Model, tea.Cmd) {
 	// Store current word before any state changes
+	// Try multiple sources to ensure we have the word
 	currentWord := m.currentWord
 	
-	// Ensure we have a current word
+	// If currentWord is empty, try to get it from the words array
 	if currentWord == "" {
-		// Should not happen, but handle gracefully
-		// Try to get it from words array if available
 		if m.wordIndex < len(m.words) {
 			currentWord = m.words[m.wordIndex]
+			// Restore it to m.currentWord for consistency
 			m.currentWord = currentWord
-		} else {
-			// No word available - this is an error state
-			return m, nil
 		}
+	}
+	
+	// Final check - if still empty, we can't validate
+	if currentWord == "" {
+		// This is an error state - show error but don't crash
+		m.dialogType = dialogIncorrect
+		m.dialogMsg = "Error: No word available for comparison"
+		m.dialogDiff = "Unable to compare input. Please restart the application."
+		m.dialogState = dialogShowing
+		return m, nil
 	}
 	
 	if input == currentWord {
