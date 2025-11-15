@@ -66,7 +66,6 @@ func TestDialogRendering(t *testing.T) {
 	model := initialAppModel(localizer, "en", []string{"Haus"})
 	model.dialogState = dialogShowing
 	model.dialogType = dialogCorrect
-	model.dialogMsg = ""
 	model.dialogDiff = ""
 
 	dialog := model.renderDialog()
@@ -88,7 +87,6 @@ func TestDialogWithDiff(t *testing.T) {
 	model := initialAppModel(localizer, "en", []string{"Haus"})
 	model.dialogState = dialogShowing
 	model.dialogType = dialogIncorrect
-	model.dialogMsg = ""
 	model.dialogDiff = formatWordDiff("Hau", "Haus", localizer)
 
 	dialog := model.renderDialog()

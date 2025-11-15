@@ -39,7 +39,6 @@ type appModel struct {
 	currentWord  string
 	wordIndex    int       // Current word index in practice
 	correctCount int
-	totalAttempts int
 	correctWords []string
 	language     string
 	localizer    *i18n.Localizer
@@ -47,16 +46,12 @@ type appModel struct {
 	// Dialog state
 	dialogState  dialogState
 	dialogType   dialogType
-	dialogMsg    string
 	dialogDiff   string
 	
 	// Input state
 	inputText    string
 	showInput    bool
 	inputError   string
-	
-	// State management
-	waitingForAudio bool  // Waiting for TTS to finish
 }
 
 // Styles for the TUI
@@ -71,9 +66,6 @@ var (
 			Foreground(lipgloss.Color("15")).       // White text
 			Bold(true).
 			Padding(0, 1)
-	
-	contentStyle = lipgloss.NewStyle().
-			Padding(1, 2)
 	
 	dialogBoxStyle = lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
@@ -106,15 +98,12 @@ func initialAppModel(localizer *i18n.Localizer, language string, words []string)
 		wordIndex:      0,
 		showInput:      false,
 		dialogState:    dialogHidden,
-		waitingForAudio: false,
 	}
 }
 
 // Init initializes the model and starts the first word
 func (m appModel) Init() tea.Cmd {
-	// Start with the first word
-	model := m
-	return model.startNextWord()
+	return m.startNextWord()
 }
 
 // Update handles messages and updates the model
@@ -126,39 +115,26 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width = msg.Width
 		m.height = msg.Height
 		
+		headerHeight := 3 // Title bar with borders
 		if !m.ready {
-			// Initialize viewport with space for title bar (border takes 2 lines: top + bottom)
-			headerHeight := 3  // Title bar with top border, content, bottom border
-			footerHeight := 0
-			m.viewport = viewport.New(msg.Width, msg.Height-headerHeight-footerHeight)
+			m.viewport = viewport.New(msg.Width, msg.Height-headerHeight)
 			m.viewport.YPosition = headerHeight
 			m.ready = true
 			m.updateViewportContent()
 		} else {
-			// Reserve space for title bar with borders (top + bottom = 2 extra lines)
 			m.viewport.Width = msg.Width
-			m.viewport.Height = msg.Height - 3 // Title bar with borders
+			m.viewport.Height = msg.Height - headerHeight
 		}
 		return m, nil
 		
 	case tuiRepeatAudioMsg:
-		// Audio repetition completed
+		// Audio repetition completed - no action needed
 		return m, nil
 		
 	case speakWordMsg:
-		// Word spoken, now show input
-		// Ensure currentWord is still set (it should be, but double-check)
-		if m.currentWord == "" && m.wordIndex < len(m.words) {
-			m.currentWord = m.words[m.wordIndex]
-		}
-		m.waitingForAudio = false
+		// Word spoken, show input prompt
 		m.showInput = true
 		m.updateViewportContent()
-		return m, nil
-		
-	case validationCompleteMsg:
-		// Validation complete, dialog is already shown
-		// When dialog is closed, we'll move to next word
 		return m, nil
 		
 	case tea.KeyMsg:
@@ -174,11 +150,10 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		
-		// Handle normal input
+		// Handle input when showing input prompt
 		if m.showInput {
 			switch msg.String() {
 			case "enter":
-				// Submit input
 				input := strings.TrimSpace(m.inputText)
 				if input == "" {
 					validationError, _ := m.localizer.Localize(&i18n.LocalizeConfig{
@@ -188,10 +163,8 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.updateViewportContent()
 					return m, nil
 				}
-				// Validate and show feedback
 				return m.validateInput(input)
 			case "tab":
-				// Repeat audio
 				return m, m.repeatAudio()
 			case "backspace":
 				if len(m.inputText) > 0 {
@@ -203,7 +176,6 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "q", "ctrl+c":
 				return m, tea.Quit
 			default:
-				// Add character to input
 				if len(msg.Runes) > 0 {
 					m.inputText += string(msg.Runes)
 					m.inputError = ""
@@ -213,8 +185,8 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 		
-		switch msg.String() {
-		case "q", "ctrl+c":
+		// Global quit handler
+		if msg.String() == "q" || msg.String() == "ctrl+c" {
 			return m, tea.Quit
 		}
 	}
@@ -230,23 +202,18 @@ func (m appModel) View() string {
 		return "Initializing..."
 	}
 	
-	// If dialog is showing, show title bar + centered dialog
-	// (Keep title bar visible for context, dialog replaces viewport)
+	var s strings.Builder
+	titleBar := m.renderTitleBar()
+	s.WriteString(titleBar)
+	
 	if m.dialogState == dialogShowing {
-		var s strings.Builder
-		
-		// Show title bar for context
-		titleBar := m.renderTitleBar()
-		s.WriteString(titleBar)
-		
-		// Calculate remaining height for dialog (after title bar)
+		// Show dialog centered below title bar
 		titleBarHeight := strings.Count(titleBar, "\n") + 1
 		remainingHeight := m.height - titleBarHeight
 		if remainingHeight < 0 {
 			remainingHeight = m.height
 		}
 		
-		// Center dialog in remaining space
 		dialog := m.renderDialog()
 		centeredDialog := lipgloss.Place(
 			m.width, remainingHeight,
@@ -254,20 +221,10 @@ func (m appModel) View() string {
 			dialog,
 		)
 		s.WriteString(centeredDialog)
-		
-		return s.String()
+	} else {
+		// Show viewport content
+		s.WriteString(m.viewport.View())
 	}
-	
-	// Normal view: title bar + viewport
-	var s strings.Builder
-	
-	// Title bar (includes borders)
-	titleBar := m.renderTitleBar()
-	s.WriteString(titleBar)
-	
-	// Content area (viewport)
-	content := m.viewport.View()
-	s.WriteString(content)
 	
 	return s.String()
 }
@@ -275,7 +232,6 @@ func (m appModel) View() string {
 // renderTitleBar renders the title bar with progress information
 func (m appModel) renderTitleBar() string {
 	wordsList := strings.Join(m.correctWords, ", ")
-	// Use turquoise for words since we now have a border instead of background
 	coloredWordsList := ""
 	if wordsList != "" {
 		coloredWordsList = turquoiseStyle.Render(wordsList)
@@ -291,8 +247,7 @@ func (m appModel) renderTitleBar() string {
 		},
 	})
 	
-	// Render with full width minus 2 for border characters to ensure right border is visible
-	// The border takes 2 characters (left + right), so content width is width - 2
+	// Width minus 2 for border characters (left + right)
 	contentWidth := m.width - 2
 	if contentWidth < 0 {
 		contentWidth = m.width
@@ -302,9 +257,6 @@ func (m appModel) renderTitleBar() string {
 
 // renderDialog renders the feedback dialog
 func (m appModel) renderDialog() string {
-	var dialog strings.Builder
-	
-	// Dialog title and style
 	var title string
 	var style lipgloss.Style
 	
@@ -316,131 +268,84 @@ func (m appModel) renderDialog() string {
 		style = dialogBoxStyle.Copy().Inherit(incorrectDialogStyle)
 	}
 	
-	// Title only (no duplicate message)
+	var dialog strings.Builder
 	dialog.WriteString(dialogTitleStyle.Render(title))
 	dialog.WriteString("\n\n")
 	
-	// Show diff if available (for incorrect answers)
 	if m.dialogDiff != "" {
-		// The diff already contains newlines, so we don't need to add extra spacing
 		dialog.WriteString(m.dialogDiff)
 	}
 	
-	// Instructions
-	dialog.WriteString("\n")
-	dialog.WriteString("(Press Enter to continue)")
+	pressEnterMsg, _ := m.localizer.Localize(&i18n.LocalizeConfig{
+		MessageID: "PressEnterToContinue",
+	})
+	dialog.WriteString("\n(" + pressEnterMsg + ")")
 	
 	return style.Render(dialog.String())
 }
 
 // updateViewportContent updates the viewport content
 func (m *appModel) updateViewportContent() {
-	var content strings.Builder
-	
-	if m.showInput {
-		// Show input prompt
-		var title string
-		title, _ = m.localizer.Localize(&i18n.LocalizeConfig{
-			MessageID: "WordPrompt",
-			TemplateData: map[string]interface{}{
-				"Number": m.wordIndex + 1,
-			},
-		})
-		
-		placeholder, _ := m.localizer.Localize(&i18n.LocalizeConfig{
-			MessageID: "Placeholder",
-		})
-		
-		tabHint, _ := m.localizer.Localize(&i18n.LocalizeConfig{
-			MessageID: "TabHint",
-		})
-		
-		content.WriteString(title)
-		content.WriteString("\n\n")
-		
-		// Input field
-		if m.inputText == "" {
-			content.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("8")).Render(placeholder))
-		} else {
-			content.WriteString(m.inputText)
-		}
-		content.WriteString("█") // Cursor
-		content.WriteString("\n\n")
-		
-		if m.inputError != "" {
-			content.WriteString(errorStyle.Render("❌ " + m.inputError))
-			content.WriteString("\n")
-		}
-		
-		content.WriteString(tabHint)
-	} else {
-		// Show welcome or waiting message
-		content.WriteString("Waiting for next word...")
+	if !m.showInput {
+		m.viewport.SetContent("Waiting for next word...")
+		return
 	}
 	
+	var content strings.Builder
+	
+	title, _ := m.localizer.Localize(&i18n.LocalizeConfig{
+		MessageID: "WordPrompt",
+		TemplateData: map[string]interface{}{"Number": m.wordIndex + 1},
+	})
+	placeholder, _ := m.localizer.Localize(&i18n.LocalizeConfig{MessageID: "Placeholder"})
+	tabHint, _ := m.localizer.Localize(&i18n.LocalizeConfig{MessageID: "TabHint"})
+	
+	content.WriteString(title)
+	content.WriteString("\n\n")
+	
+	if m.inputText == "" {
+		content.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("8")).Render(placeholder))
+	} else {
+		content.WriteString(m.inputText)
+	}
+	content.WriteString("█\n\n")
+	
+	if m.inputError != "" {
+		content.WriteString(errorStyle.Render("❌ " + m.inputError))
+		content.WriteString("\n")
+	}
+	
+	content.WriteString(tabHint)
 	m.viewport.SetContent(content.String())
 }
 
 // validateInput validates the user input and shows feedback
 func (m *appModel) validateInput(input string) (tea.Model, tea.Cmd) {
-	// Store current word before any state changes
-	// Try multiple sources to ensure we have the word
-	currentWord := m.currentWord
-	
-	// If currentWord is empty, try to get it from the words array
-	if currentWord == "" {
+	if m.currentWord == "" {
+		// Fallback: try to get word from array (shouldn't be needed)
 		if m.wordIndex < len(m.words) {
-			currentWord = m.words[m.wordIndex]
-			// Restore it to m.currentWord for consistency
-			m.currentWord = currentWord
+			m.currentWord = m.words[m.wordIndex]
+		} else {
+			return m, nil // Can't validate without a word
 		}
 	}
 	
-	// Final check - if still empty, we can't validate
-	if currentWord == "" {
-		// This is an error state - show error but don't crash
-		m.dialogType = dialogIncorrect
-		m.dialogMsg = "Error: No word available for comparison"
-		m.dialogDiff = "Unable to compare input. Please restart the application."
-		m.dialogState = dialogShowing
-		return m, nil
-	}
-	
-	if input == currentWord {
-		// Correct!
+	if input == m.currentWord {
 		m.correctCount++
-		m.correctWords = append(m.correctWords, currentWord)
-		
+		m.correctWords = append(m.correctWords, m.currentWord)
 		m.dialogType = dialogCorrect
-		m.dialogMsg = ""  // Title will be shown, no need for separate message
 		m.dialogDiff = ""
-		m.dialogState = dialogShowing
 	} else {
-		// Incorrect - show diff
 		m.dialogType = dialogIncorrect
-		m.dialogMsg = ""  // Title will be shown, no need for separate message
-		// Format diff with user input and correct word
-		// Use the stored currentWord to ensure we have the value
-		m.dialogDiff = formatWordDiff(input, currentWord, m.localizer)
-		m.dialogState = dialogShowing
+		m.dialogDiff = formatWordDiff(input, m.currentWord, m.localizer)
 	}
 	
-	// Clear input (but keep currentWord - don't clear it!)
+	m.dialogState = dialogShowing
 	m.inputText = ""
 	m.inputError = ""
 	m.showInput = false
-	// NOTE: We intentionally do NOT clear m.currentWord here
-	// It must remain available until we move to the next word
 	
-	// Return a message to notify that validation is complete
-	return m, func() tea.Msg {
-		return validationCompleteMsg{correct: input == m.currentWord}
-	}
-}
-
-// validationCompleteMsg is sent when input validation completes
-type validationCompleteMsg struct {
-	correct bool
+	return m, nil
 }
 
 // repeatAudio repeats the audio for the current word
@@ -459,27 +364,22 @@ type tuiRepeatAudioMsg struct{}
 // startNextWord starts the next word in the queue
 func (m *appModel) startNextWord() tea.Cmd {
 	if m.wordIndex >= len(m.words) {
-		// All words completed
 		return tea.Quit
 	}
 	
-	// Ensure we have a word to practice
-	if m.wordIndex >= len(m.words) || m.words[m.wordIndex] == "" {
-		return tea.Quit
-	}
-	
-	// Set current word BEFORE any other state changes
 	word := m.words[m.wordIndex]
+	if word == "" {
+		return tea.Quit
+	}
+	
 	m.currentWord = word
-	m.totalAttempts++
 	m.inputText = ""
 	m.inputError = ""
 	m.showInput = false
-	m.waitingForAudio = true
 	m.dialogState = dialogHidden
 	m.updateViewportContent()
 	
-	// Speak the word (use local variable to ensure we speak the right word)
+	// Speak the word
 	return func() tea.Msg {
 		if err := speakWord(word, m.language); err != nil {
 			// Continue even if TTS fails
@@ -493,22 +393,14 @@ type speakWordMsg struct{}
 
 // handleDialogClose handles closing the dialog and moving to next word
 func (m *appModel) handleDialogClose() tea.Cmd {
-	// Store current word before clearing state (for queue management)
-	currentWordForQueue := m.currentWord
-	
-	m.dialogState = dialogHidden
-	m.dialogMsg = ""
-	m.dialogDiff = ""
-	
-	// Check if word was incorrect - add to end of queue
-	// Use stored word to ensure we have the value even if currentWord gets cleared
-	if m.dialogType == dialogIncorrect && currentWordForQueue != "" {
-		m.words = append(m.words, currentWordForQueue)
+	// If word was incorrect, add it back to the end of the queue
+	if m.dialogType == dialogIncorrect && m.currentWord != "" {
+		m.words = append(m.words, m.currentWord)
 	}
 	
-	// Move to next word
+	m.dialogState = dialogHidden
+	m.dialogDiff = ""
 	m.wordIndex++
 	
-	// Start next word (this will set a new currentWord)
 	return m.startNextWord()
 }
