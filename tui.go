@@ -74,7 +74,8 @@ var (
 			Border(lipgloss.RoundedBorder()).
 			BorderForeground(lipgloss.Color("6")).  // Turquoise
 			Padding(1, 2).
-			Margin(1, 0)
+			Margin(1, 0).
+			Width(60)  // Set minimum width for dialog
 	
 	dialogTitleStyle = lipgloss.NewStyle().
 			Bold(true).
@@ -288,8 +289,8 @@ func (m appModel) renderDialog() string {
 	
 	// Show diff if available (for incorrect answers)
 	if m.dialogDiff != "" {
+		// The diff already contains newlines, so we don't need to add extra spacing
 		dialog.WriteString(m.dialogDiff)
-		dialog.WriteString("\n")
 	}
 	
 	// Instructions
@@ -349,6 +350,12 @@ func (m *appModel) updateViewportContent() {
 
 // validateInput validates the user input and shows feedback
 func (m *appModel) validateInput(input string) (tea.Model, tea.Cmd) {
+	// Ensure we have a current word
+	if m.currentWord == "" {
+		// Should not happen, but handle gracefully
+		return m, nil
+	}
+	
 	if input == m.currentWord {
 		// Correct!
 		m.correctCount++
@@ -359,9 +366,10 @@ func (m *appModel) validateInput(input string) (tea.Model, tea.Cmd) {
 		m.dialogDiff = ""
 		m.dialogState = dialogShowing
 	} else {
-		// Incorrect
+		// Incorrect - show diff
 		m.dialogType = dialogIncorrect
 		m.dialogMsg = ""  // Title will be shown, no need for separate message
+		// Format diff with user input and correct word
 		m.dialogDiff = formatWordDiff(input, m.currentWord, m.localizer)
 		m.dialogState = dialogShowing
 	}
