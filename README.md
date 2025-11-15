@@ -1,10 +1,10 @@
-# German Dictation Practice
+# Dictation Practice
 
-A CLI application built with Go and [Huh](https://github.com/charmbracelet/huh) that helps students practice German spelling through dictation exercises.
+A CLI application built with Go and [Huh](https://github.com/charmbracelet/huh) that helps students practice spelling through dictation exercises. Supports multiple languages with internationalized interface and language-specific text-to-speech.
 
 ## Features
 
-- 📝 Reads German words from a YAML configuration file
+- 📝 Reads words from a YAML configuration file
 - 🔀 Shuffles words for varied practice sessions
 - 🔊 Uses macOS native Text-to-Speech to pronounce words
 - ⌨️ Interactive prompts for typing practice
@@ -30,8 +30,9 @@ A CLI application built with Go and [Huh](https://github.com/charmbracelet/huh) 
 
 ## Usage
 
-1. Edit `config.yaml` to add your German words:
+1. Edit `config.yaml` to add your words and set the language:
    ```yaml
+   language: de  # Language code: 'en' for English, 'de' for German
    words:
      - Haus
      - Buch
@@ -71,6 +72,16 @@ words:
   - Apfel
   - Auto
   - Garten
+```
+
+**Example for English:**
+```yaml
+language: en
+words:
+  - House
+  - Book
+  - School
+  - Friend
 ```
 
 ### Language Configuration
@@ -139,7 +150,7 @@ To add support for a new language:
 3. **Practice Loop**: For each word:
    - Uses macOS `say` command with German voice (Anna) to pronounce the word
    - Prompts you to type the word using Huh's interactive input
-   - Validates your spelling (case-insensitive)
+   - Validates your spelling (case-sensitive for proper capitalization)
    - Repeats if incorrect until you get it right
 4. **Summary**: Displays statistics about your practice session
 
