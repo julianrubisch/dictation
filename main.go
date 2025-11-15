@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"os/exec"
 	"time"
 
 	"gopkg.in/yaml.v3"
@@ -67,4 +68,21 @@ func shuffleWords(words []string) []string {
 	}
 
 	return shuffled
+}
+
+// speakWord uses macOS's native 'say' command to speak a word in German
+// This demonstrates executing external commands in Go using os/exec
+func speakWord(word string) error {
+	// exec.Command creates a command struct (doesn't run it yet)
+	// -v "Anna" specifies the German voice
+	// -r 180 sets speech rate (words per minute)
+	cmd := exec.Command("say", "-v", "Anna", "-r", "180", word)
+	
+	// cmd.Run() executes the command and waits for completion
+	if err := cmd.Run(); err != nil {
+		// Fallback to default voice if German voice unavailable
+		cmd := exec.Command("say", "-r", "180", word)
+		return cmd.Run()
+	}
+	return nil
 }
