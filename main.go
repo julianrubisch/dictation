@@ -226,15 +226,22 @@ func formatWordDiff(userInput, correctWord string) string {
 	}
 	
 	// Format the output with colored labels
+	// Use fixed-width labels (14 chars) to ensure proper alignment
+	// This accounts for ANSI escape codes in colored text
+	labelWidth := 14
+	yourInputLabel := labelStyle.Width(labelWidth).Render("Your input:")
+	correctLabel := labelStyle.Width(labelWidth).Render("Correct:")
+	diffLabel := labelStyle.Width(labelWidth).Render("Differences:")
+	
 	return fmt.Sprintf(
 		"%s  %s\n"+
 			"%s  %s\n"+
 			"%s  %s",
-		labelStyle.Render("Your input:"),
+		yourInputLabel,
 		userLine.String(),
-		labelStyle.Render("Correct:"),
+		correctLabel,
 		correctLine.String(),
-		labelStyle.Render("Differences:"),
+		diffLabel,
 		diffLine.String(),
 	)
 }
