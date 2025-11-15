@@ -66,6 +66,7 @@ func main() {
 	// Track progress
 	correctCount := 0
 	totalAttempts := 0
+	correctWords := []string{}  // Track which words have been completed correctly
 
 	// Practice words using a queue approach
 	// When a word is incorrect, it's added back to the end of the queue
@@ -76,12 +77,15 @@ func main() {
 
 		// Speak the word using TTS with language-specific voice
 		// Show progress: how many words completed correctly out of original total
+		// Include comma-separated list of correctly spelled words
+		wordsList := strings.Join(correctWords, ", ")
 		progressMsg, _ := localizer.Localize(&i18n.LocalizeConfig{
 			MessageID: "ProgressMessage",
 			TemplateData: map[string]interface{}{
 				"Current":   i + 1,
 				"Completed": correctCount,
 				"Total":     originalWordCount,
+				"Words":     wordsList,
 			},
 		})
 		fmt.Printf("\n🔊 %s\n", progressMsg)
@@ -110,6 +114,7 @@ func main() {
 		if userInput == word {
 			fmt.Println(correctMsg)
 			correctCount++
+			correctWords = append(correctWords, word)  // Add to list of correctly spelled words
 		} else {
 			// Show colorful feedback with visual diff to help learning
 			fmt.Println(errorStyle.Render(incorrectMsg))

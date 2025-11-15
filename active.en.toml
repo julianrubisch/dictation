@@ -55,4 +55,4 @@ other = "please enter a word"
 other = "💡 Press TAB to repeat the audio"
 
 [ProgressMessage]
-other = "Word {{.Current}}: {{.Completed}} of {{.Total}} completed correctly"
+other = "Word {{.Current}}: {{.Completed}} of {{.Total}} completed correctly{{if .Words}} ({{.Words}}){{end}}"

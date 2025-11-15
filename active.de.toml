@@ -55,4 +55,4 @@ other = "Bitte gib ein Wort ein"
 other = "💡 Drücke TAB, um die Audioausgabe zu wiederholen"
 
 [ProgressMessage]
-other = "Wort {{.Current}}: {{.Completed}} von {{.Total}} richtig geschrieben"
+other = "Wort {{.Current}}: {{.Completed}} von {{.Total}} richtig geschrieben{{if .Words}} ({{.Words}}){{end}}"
