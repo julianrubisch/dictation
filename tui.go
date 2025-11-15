@@ -350,16 +350,26 @@ func (m *appModel) updateViewportContent() {
 
 // validateInput validates the user input and shows feedback
 func (m *appModel) validateInput(input string) (tea.Model, tea.Cmd) {
+	// Store current word before any state changes
+	currentWord := m.currentWord
+	
 	// Ensure we have a current word
-	if m.currentWord == "" {
+	if currentWord == "" {
 		// Should not happen, but handle gracefully
-		return m, nil
+		// Try to get it from words array if available
+		if m.wordIndex < len(m.words) {
+			currentWord = m.words[m.wordIndex]
+			m.currentWord = currentWord
+		} else {
+			// No word available - this is an error state
+			return m, nil
+		}
 	}
 	
-	if input == m.currentWord {
+	if input == currentWord {
 		// Correct!
 		m.correctCount++
-		m.correctWords = append(m.correctWords, m.currentWord)
+		m.correctWords = append(m.correctWords, currentWord)
 		
 		m.dialogType = dialogCorrect
 		m.dialogMsg = ""  // Title will be shown, no need for separate message
@@ -370,7 +380,8 @@ func (m *appModel) validateInput(input string) (tea.Model, tea.Cmd) {
 		m.dialogType = dialogIncorrect
 		m.dialogMsg = ""  // Title will be shown, no need for separate message
 		// Format diff with user input and correct word
-		m.dialogDiff = formatWordDiff(input, m.currentWord, m.localizer)
+		// Use the stored currentWord to ensure we have the value
+		m.dialogDiff = formatWordDiff(input, currentWord, m.localizer)
 		m.dialogState = dialogShowing
 	}
 	
@@ -410,7 +421,14 @@ func (m *appModel) startNextWord() tea.Cmd {
 		return tea.Quit
 	}
 	
-	m.currentWord = m.words[m.wordIndex]
+	// Ensure we have a word to practice
+	if m.wordIndex >= len(m.words) || m.words[m.wordIndex] == "" {
+		return tea.Quit
+	}
+	
+	// Set current word BEFORE any other state changes
+	word := m.words[m.wordIndex]
+	m.currentWord = word
 	m.totalAttempts++
 	m.inputText = ""
 	m.inputError = ""
@@ -419,9 +437,9 @@ func (m *appModel) startNextWord() tea.Cmd {
 	m.dialogState = dialogHidden
 	m.updateViewportContent()
 	
-	// Speak the word
+	// Speak the word (use local variable to ensure we speak the right word)
 	return func() tea.Msg {
-		if err := speakWord(m.currentWord, m.language); err != nil {
+		if err := speakWord(word, m.language); err != nil {
 			// Continue even if TTS fails
 		}
 		return speakWordMsg{}
@@ -433,18 +451,22 @@ type speakWordMsg struct{}
 
 // handleDialogClose handles closing the dialog and moving to next word
 func (m *appModel) handleDialogClose() tea.Cmd {
+	// Store current word before clearing state (for queue management)
+	currentWordForQueue := m.currentWord
+	
 	m.dialogState = dialogHidden
 	m.dialogMsg = ""
 	m.dialogDiff = ""
 	
 	// Check if word was incorrect - add to end of queue
-	if m.dialogType == dialogIncorrect {
-		m.words = append(m.words, m.currentWord)
+	// Use stored word to ensure we have the value even if currentWord gets cleared
+	if m.dialogType == dialogIncorrect && currentWordForQueue != "" {
+		m.words = append(m.words, currentWordForQueue)
 	}
 	
 	// Move to next word
 	m.wordIndex++
 	
-	// Start next word
+	// Start next word (this will set a new currentWord)
 	return m.startNextWord()
 }
