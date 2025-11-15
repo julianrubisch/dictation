@@ -50,3 +50,6 @@ other = "Type the word here..."
 
 [ValidationError]
 other = "please enter a word"
+
+[ProgressMessage]
+other = "Word {{.Current}}: {{.Completed}} of {{.Total}} completed correctly"

@@ -395,7 +395,15 @@ func main() {
 
 		// Speak the word using TTS with language-specific voice
 		// Show progress: how many words completed correctly out of original total
-		fmt.Printf("\n🔊 Word %d: %d of %d completed correctly\n", i+1, correctCount, originalWordCount)
+		progressMsg, _ := localizer.Localize(&i18n.LocalizeConfig{
+			MessageID: "ProgressMessage",
+			TemplateData: map[string]interface{}{
+				"Current":   i + 1,
+				"Completed": correctCount,
+				"Total":     originalWordCount,
+			},
+		})
+		fmt.Printf("\n🔊 %s\n", progressMsg)
 		if err := speakWord(word, config.Language); err != nil {
 			// log.Printf doesn't exit, just logs warning
 			log.Printf("Warning: Failed to speak word: %v", err)
