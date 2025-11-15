@@ -339,10 +339,20 @@ func formatWordDiff(userInput, correctWord string, localizer *i18n.Localizer) st
 	)
 }
 
+// Version is set at build time using ldflags
+// Example: go build -ldflags "-X main.Version=v1.0.0"
+var Version = "dev"
+
 func main() {
 	// main() is the entry point of every Go program
 	// os.Args contains command-line arguments
 	// os.Args[0] is the program name, os.Args[1:] are arguments
+	
+	// Check for version flag
+	if len(os.Args) > 1 && (os.Args[1] == "-v" || os.Args[1] == "--version" || os.Args[1] == "version") {
+		fmt.Printf("dictation version %s\n", Version)
+		os.Exit(0)
+	}
 	
 	// Default config file path
 	configFile := "config.yaml"

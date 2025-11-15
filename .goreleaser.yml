@@ -1,0 +1,77 @@
+# GoReleaser configuration for automated releases
+# This is the idiomatic Go way to distribute CLI applications
+# See: https://goreleaser.com
+
+project_name: dictation
+
+# Build configuration
+builds:
+  - id: dictation
+    main: .
+    binary: dictation
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    # Skip CGO for simpler builds
+    cgo: false
+
+# Archive configuration (creates .tar.gz and .zip files)
+archives:
+  - id: default
+    format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - config.yaml
+      - active.*.toml
+      - README.md
+    name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}"
+
+# Checksums for verifying downloads
+checksum:
+  name_template: "checksums.txt"
+
+# GitHub release configuration
+release:
+  github:
+    owner: yourusername  # Change this
+    name: dictation      # Change this
+  # Draft releases for testing
+  draft: false
+  # Prerelease for beta versions
+  prerelease: false
+
+# Changelog generation
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+
+# Homebrew formula (optional - for Homebrew distribution)
+# Uncomment and configure if you want Homebrew support
+# brew:
+#   name: dictation
+#   homepage: "https://github.com/yourusername/dictation"
+#   description: "German dictation practice CLI application"
+#   license: "MIT"
+#   test: |
+#     system "#{bin}/dictation --version"
+#   install: |
+#     bin.install "dictation"
+#     # Install translation files
+#     (prefix/"etc/dictation").install "active.en.toml", "active.de.toml"
+#     (prefix/"etc/dictation").install "config.yaml"
+
+# Snapcraft (optional - for Linux Snap packages)
+# snapcraft:
+#   name: dictation
+#   summary: German dictation practice CLI
+#   description: A CLI application for practicing German spelling through dictation
+#   grade: stable
+#   confinement: strict
