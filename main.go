@@ -11,6 +11,9 @@ import (
 
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/nicksnyder/go-i18n/v2/i18n"
+	"github.com/pelletier/go-toml/v2"
+	"golang.org/x/text/language"
 	"gopkg.in/yaml.v3"
 )
 
@@ -18,7 +21,38 @@ import (
 // In Go, structs define data structures with named fields
 // The `yaml:"words"` tag tells the YAML parser which field to map to
 type Config struct {
-	Words []string `yaml:"words"`
+	Language string   `yaml:"language"` // Language code (e.g., "en", "de", "fr")
+	Words    []string `yaml:"words"`
+}
+
+// initI18n initializes the i18n bundle and loads translation files
+// This is the idiomatic Go approach using go-i18n library
+func initI18n(langCode string) (*i18n.Localizer, error) {
+	// Create bundle with English as default language
+	// The bundle manages all translation files
+	bundle := i18n.NewBundle(language.English)
+	
+	// Register TOML unmarshal function
+	// This allows go-i18n to parse TOML translation files
+	bundle.RegisterUnmarshalFunc("toml", toml.Unmarshal)
+	
+	// Load translation files
+	// These files contain all user-facing strings for each language
+	// LoadMessageFile returns (*MessageFile, error)
+	_, err := bundle.LoadMessageFile("active.en.toml")
+	if err != nil {
+		return nil, fmt.Errorf("failed to load English translations: %w", err)
+	}
+	_, err = bundle.LoadMessageFile("active.de.toml")
+	if err != nil {
+		return nil, fmt.Errorf("failed to load German translations: %w", err)
+	}
+	
+	// Create localizer for the requested language
+	// The localizer provides methods to get translated strings
+	localizer := i18n.NewLocalizer(bundle, langCode)
+	
+	return localizer, nil
 }
 
 // loadConfig reads and parses the YAML configuration file
@@ -47,8 +81,30 @@ func loadConfig(filename string) (*Config, error) {
 		return nil, fmt.Errorf("no words found in config file")
 	}
 
+	// Set default language if not specified
+	if config.Language == "" {
+		config.Language = "en"  // Default to English
+	}
+
 	// Return a pointer to the config (&config) and nil error
 	return &config, nil
+}
+
+
+// getVoiceForLanguage returns the macOS TTS voice name for a language code
+// Maps language codes to appropriate voices for better pronunciation
+func getVoiceForLanguage(langCode string) string {
+	voices := map[string]string{
+		"de": "Anna",    // German voice
+		"en": "Alex",    // English voice (US)
+		"fr": "Thomas",  // French voice (for future use)
+	}
+
+	if voice, ok := voices[langCode]; ok {
+		return voice
+	}
+	// Fallback to default system voice
+	return ""
 }
 
 // shuffleWords shuffles a slice of words using Fisher-Yates algorithm
@@ -74,17 +130,24 @@ func shuffleWords(words []string) []string {
 	return shuffled
 }
 
-// speakWord uses macOS's native 'say' command to speak a word in German
-// This demonstrates executing external commands in Go using os/exec
-func speakWord(word string) error {
-	// exec.Command creates a command struct (doesn't run it yet)
-	// -v "Anna" specifies the German voice
-	// -r 180 sets speech rate (words per minute)
-	cmd := exec.Command("say", "-v", "Anna", "-r", "180", word)
+// speakWord uses macOS's native 'say' command to speak a word
+// Uses the appropriate voice for the specified language
+func speakWord(word string, langCode string) error {
+	voice := getVoiceForLanguage(langCode)
+	
+	var cmd *exec.Cmd
+	if voice != "" {
+		// Use language-specific voice
+		// -v specifies the voice, -r sets speech rate (words per minute)
+		cmd = exec.Command("say", "-v", voice, "-r", "180", word)
+	} else {
+		// Fallback to default system voice
+		cmd = exec.Command("say", "-r", "180", word)
+	}
 	
 	// cmd.Run() executes the command and waits for completion
 	if err := cmd.Run(); err != nil {
-		// Fallback to default voice if German voice unavailable
+		// If voice-specific command fails, try default voice
 		cmd := exec.Command("say", "-r", "180", word)
 		return cmd.Run()
 	}
@@ -93,14 +156,39 @@ func speakWord(word string) error {
 
 // promptWord prompts the user to type a word and validates it
 // This uses the Huh library for beautiful terminal prompts
-func promptWord(word string, attempt int) (string, error) {
+// Uses go-i18n localizer for translations
+func promptWord(word string, attempt int, localizer *i18n.Localizer) (string, error) {
 	var input string  // Variable to store user input
 
-	// Build prompt title based on attempt number
-	title := fmt.Sprintf("Word %d: Type what you heard", attempt)
+	// Build prompt title using i18n localizer
+	// go-i18n supports template variables like {{.Number}}
+	var title string
 	if attempt > 1 {
-		title = fmt.Sprintf("Word %d: Try again (attempt %d)", attempt, attempt)
+		title, _ = localizer.Localize(&i18n.LocalizeConfig{
+			MessageID: "WordPromptRetry",
+			TemplateData: map[string]interface{}{
+				"Number":  attempt,
+				"Attempt": attempt,
+			},
+		})
+	} else {
+		title, _ = localizer.Localize(&i18n.LocalizeConfig{
+			MessageID: "WordPrompt",
+			TemplateData: map[string]interface{}{
+				"Number": attempt,
+			},
+		})
 	}
+
+	// Get placeholder text from translations
+	placeholder, _ := localizer.Localize(&i18n.LocalizeConfig{
+		MessageID: "Placeholder",
+	})
+
+	// Get validation error message
+	validationError, _ := localizer.Localize(&i18n.LocalizeConfig{
+		MessageID: "ValidationError",
+	})
 
 	// Huh provides a fluent API for building forms
 	// NewInput() creates a text input field
@@ -108,13 +196,13 @@ func promptWord(word string, attempt int) (string, error) {
 	// Validate() adds custom validation logic
 	err := huh.NewInput().
 		Title(title).
-		Placeholder("Type the word here...").
+		Placeholder(placeholder).
 		Value(&input).  // & gets address of input variable
 		Validate(func(s string) error {
 			// Anonymous function for validation
 			// Returns error if validation fails, nil if OK
 			if strings.TrimSpace(s) == "" {
-				return fmt.Errorf("please enter a word")
+				return fmt.Errorf(validationError)
 			}
 			return nil
 		}).
@@ -163,7 +251,8 @@ var (
 // formatWordDiff creates a visual comparison between user input and correct word
 // It shows both words side by side with color-coded indicators for matches and differences
 // This helps students see exactly where they made mistakes
-func formatWordDiff(userInput, correctWord string) string {
+// Uses go-i18n localizer for translations
+func formatWordDiff(userInput, correctWord string, localizer *i18n.Localizer) string {
 	// Convert to rune slices to handle Unicode characters properly
 	// Runes are Go's representation of Unicode code points
 	userRunes := []rune(userInput)
@@ -227,10 +316,15 @@ func formatWordDiff(userInput, correctWord string) string {
 	// Format the output with colored labels
 	// Use fixed-width labels (14 chars) to ensure proper alignment
 	// This accounts for ANSI escape codes in colored text
+	// Get labels from i18n localizer
+	yourInputText, _ := localizer.Localize(&i18n.LocalizeConfig{MessageID: "YourInput"})
+	correctText, _ := localizer.Localize(&i18n.LocalizeConfig{MessageID: "CorrectLabel"})
+	diffText, _ := localizer.Localize(&i18n.LocalizeConfig{MessageID: "Differences"})
+	
 	labelWidth := 14
-	yourInputLabel := labelStyle.Width(labelWidth).Render("Your input:")
-	correctLabel := labelStyle.Width(labelWidth).Render("Correct:")
-	diffLabel := labelStyle.Width(labelWidth).Render("Differences:")
+	yourInputLabel := labelStyle.Width(labelWidth).Render(yourInputText)
+	correctLabel := labelStyle.Width(labelWidth).Render(correctText)
+	diffLabel := labelStyle.Width(labelWidth).Render(diffText)
 	
 	return fmt.Sprintf(
 		"%s  %s\n"+
@@ -263,16 +357,30 @@ func main() {
 		log.Fatalf("Error loading config: %v", err)
 	}
 
+	// Initialize i18n with go-i18n library
+	// This loads translation files and creates a localizer
+	localizer, err := initI18n(config.Language)
+	if err != nil {
+		log.Fatalf("Error initializing i18n: %v", err)
+	}
+
 	// Shuffle words for variety in practice sessions
 	words := shuffleWords(config.Words)
 	originalWordCount := len(words)  // Store original count for progress display
 
-	// Print welcome message
-	fmt.Println("🎯 German Dictation Practice")
-	fmt.Println("============================")
-	fmt.Printf("You will practice %d word(s).\n\n", originalWordCount)
-	fmt.Println("Listen carefully to each word and type it correctly.")
-	fmt.Println("Press Enter after typing each word.")
+	// Print welcome message using i18n localizer
+	title, _ := localizer.Localize(&i18n.LocalizeConfig{MessageID: "Title"})
+	subtitle, _ := localizer.Localize(&i18n.LocalizeConfig{MessageID: "Subtitle"})
+	practiceInstructions, _ := localizer.Localize(&i18n.LocalizeConfig{
+		MessageID: "PracticeInstructions",
+		TemplateData: map[string]interface{}{"Count": originalWordCount},
+	})
+	pressEnter, _ := localizer.Localize(&i18n.LocalizeConfig{MessageID: "PressEnter"})
+	
+	fmt.Printf("🎯 %s\n", title)
+	fmt.Println(subtitle)
+	fmt.Printf("%s\n\n", practiceInstructions)
+	fmt.Println(pressEnter)
 
 	// Track progress
 	correctCount := 0
@@ -285,10 +393,10 @@ func main() {
 		word := words[i]
 		totalAttempts++
 
-		// Speak the word using TTS
+		// Speak the word using TTS with language-specific voice
 		// Show progress: how many words completed correctly out of original total
 		fmt.Printf("\n🔊 Word %d: %d of %d completed correctly\n", i+1, correctCount, originalWordCount)
-		if err := speakWord(word); err != nil {
+		if err := speakWord(word, config.Language); err != nil {
 			// log.Printf doesn't exit, just logs warning
 			log.Printf("Warning: Failed to speak word: %v", err)
 		}
@@ -296,9 +404,9 @@ func main() {
 		// Small delay to let TTS finish speaking
 		time.Sleep(500 * time.Millisecond)
 
-		// Prompt user for input
+		// Prompt user for input with i18n localizer
 		// Note: attempt number is always 1 since we don't retry immediately
-		userInput, err := promptWord(word, 1)
+		userInput, err := promptWord(word, 1, localizer)
 		if err != nil {
 			log.Fatalf("Error getting input: %v", err)
 		}
@@ -306,13 +414,16 @@ func main() {
 		// Check if correct (case-sensitive comparison)
 		// German requires proper capitalization (nouns are capitalized)
 		// Direct string comparison ensures exact match including case
+		correctMsg, _ := localizer.Localize(&i18n.LocalizeConfig{MessageID: "Correct"})
+		incorrectMsg, _ := localizer.Localize(&i18n.LocalizeConfig{MessageID: "IncorrectSpelling"})
+		
 		if userInput == word {
-			fmt.Println("✅ Correct! Well done!")
+			fmt.Println(correctMsg)
 			correctCount++
 		} else {
 			// Show colorful feedback with visual diff to help learning
-			fmt.Println(errorStyle.Render("❌ Incorrect spelling!"))
-			fmt.Println(formatWordDiff(userInput, word))
+			fmt.Println(errorStyle.Render(incorrectMsg))
+			fmt.Println(formatWordDiff(userInput, word, localizer))
 			fmt.Print("\n")  // Empty line for readability
 			
 			// Add the word back to the end of the queue
@@ -322,12 +433,27 @@ func main() {
 		}
 	}
 
-	// Print summary statistics
+	// Print summary statistics using i18n localizer
+	completeMsg, _ := localizer.Localize(&i18n.LocalizeConfig{MessageID: "PracticeComplete"})
+	wordsPracticedMsg, _ := localizer.Localize(&i18n.LocalizeConfig{
+		MessageID: "WordsPracticed",
+		TemplateData: map[string]interface{}{"Count": correctCount},
+	})
+	totalAttemptsMsg, _ := localizer.Localize(&i18n.LocalizeConfig{
+		MessageID: "TotalAttempts",
+		TemplateData: map[string]interface{}{"Count": totalAttempts},
+	})
+	accuracyMsg, _ := localizer.Localize(&i18n.LocalizeConfig{
+		MessageID: "Accuracy",
+		TemplateData: map[string]interface{}{
+			"Percent": fmt.Sprintf("%.1f", float64(correctCount)/float64(totalAttempts)*100),
+		},
+	})
+	
 	fmt.Println("\n" + strings.Repeat("=", 30))
-	fmt.Println("🎉 Practice Complete!")
-	fmt.Printf("Words practiced: %d\n", correctCount)
-	fmt.Printf("Total attempts: %d\n", totalAttempts)
-	// Calculate accuracy percentage
-	fmt.Printf("Accuracy: %.1f%%\n", float64(correctCount)/float64(totalAttempts)*100)
+	fmt.Println(completeMsg)
+	fmt.Println(wordsPracticedMsg)
+	fmt.Println(totalAttemptsMsg)
+	fmt.Println(accuracyMsg)
 	fmt.Println(strings.Repeat("=", 30))
 }

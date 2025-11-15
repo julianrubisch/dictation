@@ -1,0 +1,52 @@
+# English translations for dictation practice app
+
+[Title]
+other = "Dictation Practice"
+
+[Subtitle]
+other = "============================"
+
+[PracticeInstructions]
+other = "You will practice {{.Count}} word(s)."
+
+[PressEnter]
+other = "Listen carefully to each word and type it correctly.\nPress Enter after typing each word."
+
+[WordPrompt]
+other = "Word {{.Number}}: Type what you heard"
+
+[WordPromptRetry]
+other = "Word {{.Number}}: Try again (attempt {{.Attempt}})"
+
+[Correct]
+other = "✅ Correct! Well done!"
+
+[IncorrectSpelling]
+other = "❌ Incorrect spelling!"
+
+[PracticeComplete]
+other = "🎉 Practice Complete!"
+
+[WordsPracticed]
+other = "Words practiced: {{.Count}}"
+
+[TotalAttempts]
+other = "Total attempts: {{.Count}}"
+
+[Accuracy]
+other = "Accuracy: {{.Percent}}%"
+
+[YourInput]
+other = "Your input:"
+
+[CorrectLabel]
+other = "Correct:"
+
+[Differences]
+other = "Differences:"
+
+[Placeholder]
+other = "Type the word here..."
+
+[ValidationError]
+other = "please enter a word"

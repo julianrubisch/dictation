@@ -1,0 +1,52 @@
+# German translations for dictation practice app
+
+[Title]
+other = "Diktat-Übung"
+
+[Subtitle]
+other = "============================"
+
+[PracticeInstructions]
+other = "Sie werden {{.Count}} Wort/Wörter üben."
+
+[PressEnter]
+other = "Hören Sie genau zu und schreiben Sie jedes Wort richtig.\nDrücken Sie Enter nach jedem Wort."
+
+[WordPrompt]
+other = "Wort {{.Number}}: Schreiben Sie, was Sie gehört haben"
+
+[WordPromptRetry]
+other = "Wort {{.Number}}: Versuchen Sie es erneut (Versuch {{.Attempt}})"
+
+[Correct]
+other = "✅ Richtig! Gut gemacht!"
+
+[IncorrectSpelling]
+other = "❌ Falsche Rechtschreibung!"
+
+[PracticeComplete]
+other = "🎉 Übung abgeschlossen!"
+
+[WordsPracticed]
+other = "Geübte Wörter: {{.Count}}"
+
+[TotalAttempts]
+other = "Gesamtversuche: {{.Count}}"
+
+[Accuracy]
+other = "Genauigkeit: {{.Percent}}%"
+
+[YourInput]
+other = "Ihre Eingabe:"
+
+[CorrectLabel]
+other = "Richtig:"
+
+[Differences]
+other = "Unterschiede:"
+
+[Placeholder]
+other = "Geben Sie das Wort hier ein..."
+
+[ValidationError]
+other = "Bitte geben Sie ein Wort ein"
