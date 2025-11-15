@@ -8,6 +8,7 @@ A CLI application built with Go and [Huh](https://github.com/charmbracelet/huh) 
 - 🔀 Shuffles words for varied practice sessions
 - 🔊 Uses macOS native Text-to-Speech to pronounce words
 - ⌨️ Interactive prompts for typing practice
+- 🔁 Press TAB to repeat audio on demand
 - ✅ Validates spelling and provides feedback
 - 📊 Shows progress and accuracy statistics
 
@@ -149,7 +150,8 @@ To add support for a new language:
 2. **Shuffle**: Randomly shuffles the word order for each session
 3. **Practice Loop**: For each word:
    - Uses macOS `say` command with language-specific voice to pronounce the word
-   - Prompts you to type the word using Huh's interactive input (in your configured language)
+   - Prompts you to type the word using interactive input (in your configured language)
+   - **Press TAB** while typing to repeat the audio pronunciation
    - Validates your spelling (case-sensitive for proper capitalization)
    - Shows visual diff when incorrect and adds word to end of queue for later practice
 4. **Summary**: Displays statistics about your practice session
