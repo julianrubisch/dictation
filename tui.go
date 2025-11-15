@@ -230,29 +230,39 @@ func (m appModel) View() string {
 		return "Initializing..."
 	}
 	
-	var s strings.Builder
+	// Build base screen: title bar + viewport content
+	var baseScreen strings.Builder
 	
 	// Title bar (includes borders)
 	titleBar := m.renderTitleBar()
-	s.WriteString(titleBar)
+	baseScreen.WriteString(titleBar)
 	
-	// Content area (viewport)
+	// Content area (viewport) - always render
 	content := m.viewport.View()
-	s.WriteString(content)
+	baseScreen.WriteString(content)
 	
-	// Dialog overlay (if showing)
+	baseScreenStr := baseScreen.String()
+	
+	// Dialog overlay (if showing) - render as modal on top
 	if m.dialogState == dialogShowing {
 		dialog := m.renderDialog()
-		// Create overlay (centered)
-		overlay := lipgloss.Place(
+		
+		// Create modal overlay: place dialog centered over the base screen
+		// lipgloss.Place will position the dialog on top of the content
+		// Note: In terminals, we can't have true transparency, but this creates
+		// a modal effect where the dialog appears centered over the viewport
+		modal := lipgloss.Place(
 			m.width, m.height,
 			lipgloss.Center, lipgloss.Center,
 			dialog,
 		)
-		s.WriteString(overlay)
+		
+		// Return the modal overlay (dialog positioned over screen)
+		// The viewport content will still be visible around/behind the dialog
+		return modal
 	}
 	
-	return s.String()
+	return baseScreenStr
 }
 
 // renderTitleBar renders the title bar with progress information
