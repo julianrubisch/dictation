@@ -253,12 +253,17 @@ func (m appModel) View() string {
 // renderTitleBar renders the title bar with progress information
 func (m appModel) renderTitleBar() string {
 	wordsList := strings.Join(m.correctWords, ", ")
+	// Use a different color for words in title bar (white or light color on turquoise background)
 	coloredWordsList := ""
 	if wordsList != "" {
-		coloredWordsList = turquoiseStyle.Render(wordsList)
+		// Use white/light color for words in title bar since background is turquoise
+		titleBarWordsStyle := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("15")).  // White
+			Bold(true)
+		coloredWordsList = titleBarWordsStyle.Render(wordsList)
 	}
 	
-		progressMsg, _ := m.localizer.Localize(&i18n.LocalizeConfig{
+	progressMsg, _ := m.localizer.Localize(&i18n.LocalizeConfig{
 		MessageID: "ProgressMessage",
 		TemplateData: map[string]interface{}{
 			"Current":   m.wordIndex + 1,
