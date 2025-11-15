@@ -274,8 +274,13 @@ func (m appModel) renderTitleBar() string {
 		},
 	})
 	
-	// Render with full width to ensure borders extend across
-	return titleBarStyle.Width(m.width).Render("🔊 " + progressMsg)
+	// Render with full width minus 2 for border characters to ensure right border is visible
+	// The border takes 2 characters (left + right), so content width is width - 2
+	contentWidth := m.width - 2
+	if contentWidth < 0 {
+		contentWidth = m.width
+	}
+	return titleBarStyle.Width(contentWidth).Render("🔊 " + progressMsg)
 }
 
 // renderDialog renders the feedback dialog
