@@ -265,11 +265,12 @@ func main() {
 
 	// Shuffle words for variety in practice sessions
 	words := shuffleWords(config.Words)
+	originalWordCount := len(words)  // Store original count for progress display
 
 	// Print welcome message
 	fmt.Println("🎯 German Dictation Practice")
 	fmt.Println("============================")
-	fmt.Printf("You will practice %d word(s).\n\n", len(words))
+	fmt.Printf("You will practice %d word(s).\n\n", originalWordCount)
 	fmt.Println("Listen carefully to each word and type it correctly.")
 	fmt.Println("Press Enter after typing each word.")
 
@@ -285,8 +286,8 @@ func main() {
 		totalAttempts++
 
 		// Speak the word using TTS
-		// Show progress: current position in queue vs total words in queue
-		fmt.Printf("\n🔊 Speaking word %d of %d...\n", i+1, len(words))
+		// Show progress: how many words completed correctly out of original total
+		fmt.Printf("\n🔊 Word %d: %d of %d completed correctly\n", i+1, correctCount, originalWordCount)
 		if err := speakWord(word); err != nil {
 			// log.Printf doesn't exit, just logs warning
 			log.Printf("Warning: Failed to speak word: %v", err)
