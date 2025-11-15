@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/huh"
+	"github.com/charmbracelet/lipgloss"
 	"gopkg.in/yaml.v3"
 )
 
@@ -127,6 +128,117 @@ func promptWord(word string, attempt int) (string, error) {
 	return strings.TrimSpace(input), nil
 }
 
+// Define color styles for the diff output
+// These are package-level variables that can be reused
+var (
+	// Error style for incorrect input
+	errorStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("9")).  // Red
+			Bold(true)
+	
+	// Success style for correct parts
+	successStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("10"))  // Green
+	
+	// Label style for section headers
+	labelStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("14")).  // Cyan
+			Bold(true)
+	
+	// Diff marker style for difference indicators
+	diffMarkerStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("11")).  // Yellow
+			Bold(true)
+	
+	// Correct character style (when characters match)
+	correctCharStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("10"))  // Green
+	
+	// Wrong character style (when characters differ)
+	wrongCharStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("9")).  // Red
+			Bold(true)
+)
+
+// formatWordDiff creates a visual comparison between user input and correct word
+// It shows both words side by side with color-coded indicators for matches and differences
+// This helps students see exactly where they made mistakes
+func formatWordDiff(userInput, correctWord string) string {
+	// Convert to rune slices to handle Unicode characters properly
+	// Runes are Go's representation of Unicode code points
+	userRunes := []rune(userInput)
+	correctRunes := []rune(correctWord)
+	
+	// Find the maximum length for alignment
+	maxLen := len(userRunes)
+	if len(correctRunes) > maxLen {
+		maxLen = len(correctRunes)
+	}
+	
+	// Build the comparison strings with color coding
+	// We'll show matching characters in green, differences in red
+	var userLine strings.Builder
+	var correctLine strings.Builder
+	var diffLine strings.Builder
+	
+	// Iterate through each position up to the maximum length
+	for i := 0; i < maxLen; i++ {
+		var userChar, correctChar rune
+		userExists := i < len(userRunes)
+		correctExists := i < len(correctRunes)
+		
+		if userExists {
+			userChar = userRunes[i]
+		} else {
+			userChar = ' '  // Padding for missing characters
+		}
+		
+		if correctExists {
+			correctChar = correctRunes[i]
+		} else {
+			correctChar = ' '  // Padding for missing characters
+		}
+		
+		// Compare characters (case-insensitive)
+		// Use strings.ToLower for proper Unicode case folding
+		userLower := strings.ToLower(string(userChar))
+		correctLower := strings.ToLower(string(correctChar))
+		
+		isMatch := userLower == correctLower && userExists && correctExists
+		
+		// Add characters to lines with appropriate styling
+		if isMatch {
+			// Both characters match - show in green
+			userLine.WriteString(correctCharStyle.Render(string(userChar)))
+			correctLine.WriteString(correctCharStyle.Render(string(correctChar)))
+		} else {
+			// Characters differ - show in red
+			userLine.WriteString(wrongCharStyle.Render(string(userChar)))
+			correctLine.WriteString(wrongCharStyle.Render(string(correctChar)))
+		}
+		
+		// Mark differences with colored indicators
+		if !isMatch {
+			diffLine.WriteString(diffMarkerStyle.Render("^"))  // Mark difference in yellow
+		} else {
+			diffLine.WriteString(" ")  // Match - no marker
+		}
+	}
+	
+	// Format the output with colored labels
+	return fmt.Sprintf(
+		"%s  %s\n"+
+			"%s  %s\n"+
+			"%s  %s",
+		labelStyle.Render("Your input:"),
+		userLine.String(),
+		labelStyle.Render("Correct:"),
+		correctLine.String(),
+		labelStyle.Render("Differences:"),
+		diffLine.String(),
+	)
+}
+
 func main() {
 	// main() is the entry point of every Go program
 	// os.Args contains command-line arguments
@@ -153,7 +265,7 @@ func main() {
 	fmt.Println("============================")
 	fmt.Printf("You will practice %d word(s).\n\n", len(words))
 	fmt.Println("Listen carefully to each word and type it correctly.")
-	fmt.Println("Press Enter after typing each word.\n")
+	fmt.Println("Press Enter after typing each word.")
 
 	// Track progress
 	correctCount := 0
@@ -192,8 +304,10 @@ func main() {
 				correct = true
 				correctCount++
 			} else {
-				// Show feedback and increment attempt counter
-				fmt.Printf("❌ Incorrect. You typed: '%s', but the correct word is: '%s'\n", userInput, word)
+				// Show colorful feedback with visual diff to help learning
+				fmt.Println(errorStyle.Render("❌ Incorrect spelling!"))
+				fmt.Println(formatWordDiff(userInput, word))
+				fmt.Print("\n")  // Empty line for readability
 				attempt++
 			}
 		}
