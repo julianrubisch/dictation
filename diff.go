@@ -38,6 +38,10 @@ var (
 	wrongCharStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("9")).  // Red
 			Bold(true)
+	
+	// Turquoise style for correctly spelled words list
+	turquoiseStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("6"))  // Turquoise/Cyan
 )
 
 // formatWordDiff creates a visual comparison between user input and correct word

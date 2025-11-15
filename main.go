@@ -77,15 +77,19 @@ func main() {
 
 		// Speak the word using TTS with language-specific voice
 		// Show progress: how many words completed correctly out of original total
-		// Include comma-separated list of correctly spelled words
+		// Include comma-separated list of correctly spelled words (colored turquoise)
 		wordsList := strings.Join(correctWords, ", ")
+		coloredWordsList := ""
+		if wordsList != "" {
+			coloredWordsList = turquoiseStyle.Render(wordsList)
+		}
 		progressMsg, _ := localizer.Localize(&i18n.LocalizeConfig{
 			MessageID: "ProgressMessage",
 			TemplateData: map[string]interface{}{
 				"Current":   i + 1,
 				"Completed": correctCount,
 				"Total":     originalWordCount,
-				"Words":     wordsList,
+				"Words":     coloredWordsList,
 			},
 		})
 		fmt.Printf("\n🔊 %s\n", progressMsg)
