@@ -270,7 +270,7 @@ func (m appModel) renderTitleBar() string {
 func (m appModel) renderDialog() string {
 	var dialog strings.Builder
 	
-	// Dialog title and message
+	// Dialog title and style
 	var title string
 	var style lipgloss.Style
 	
@@ -282,16 +282,12 @@ func (m appModel) renderDialog() string {
 		style = dialogBoxStyle.Copy().Inherit(incorrectDialogStyle)
 	}
 	
+	// Title only (no duplicate message)
 	dialog.WriteString(dialogTitleStyle.Render(title))
-	dialog.WriteString("\n")
+	dialog.WriteString("\n\n")
 	
-	if m.dialogMsg != "" {
-		dialog.WriteString(m.dialogMsg)
-		dialog.WriteString("\n")
-	}
-	
+	// Show diff if available (for incorrect answers)
 	if m.dialogDiff != "" {
-		dialog.WriteString("\n")
 		dialog.WriteString(m.dialogDiff)
 		dialog.WriteString("\n")
 	}
@@ -358,16 +354,14 @@ func (m *appModel) validateInput(input string) (tea.Model, tea.Cmd) {
 		m.correctCount++
 		m.correctWords = append(m.correctWords, m.currentWord)
 		
-		correctMsg, _ := m.localizer.Localize(&i18n.LocalizeConfig{MessageID: "Correct"})
 		m.dialogType = dialogCorrect
-		m.dialogMsg = correctMsg
+		m.dialogMsg = ""  // Title will be shown, no need for separate message
 		m.dialogDiff = ""
 		m.dialogState = dialogShowing
 	} else {
 		// Incorrect
-		incorrectMsg, _ := m.localizer.Localize(&i18n.LocalizeConfig{MessageID: "IncorrectSpelling"})
 		m.dialogType = dialogIncorrect
-		m.dialogMsg = incorrectMsg
+		m.dialogMsg = ""  // Title will be shown, no need for separate message
 		m.dialogDiff = formatWordDiff(input, m.currentWord, m.localizer)
 		m.dialogState = dialogShowing
 	}
