@@ -56,3 +56,6 @@ other = "💡 Press TAB to repeat the audio"
 
 [ProgressMessage]
 other = "Word {{.Current}}: {{.Completed}} of {{.Total}} completed correctly{{if .Words}} ({{.Words}}){{end}}"
+
+[PressEnterToContinue]
+other = "Press Enter to continue"

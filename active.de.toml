@@ -46,7 +46,7 @@ other = "Richtig:"
 other = "Unterschiede:"
 
 [Placeholder]
-other = "Gebe das Wort hier ein..."
+other = "Gib das Wort hier ein..."
 
 [ValidationError]
 other = "Bitte gib ein Wort ein"
@@ -56,3 +56,6 @@ other = "💡 Drücke TAB, um die Audioausgabe zu wiederholen"
 
 [ProgressMessage]
 other = "Wort {{.Current}}: {{.Completed}} von {{.Total}} richtig geschrieben{{if .Words}} ({{.Words}}){{end}}"
+
+[PressEnterToContinue]
+other = "Drücke Enter, um fortzufahren"
