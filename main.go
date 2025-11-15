@@ -199,12 +199,11 @@ func formatWordDiff(userInput, correctWord string) string {
 			correctChar = ' '  // Padding for missing characters
 		}
 		
-		// Compare characters (case-insensitive)
-		// Use strings.ToLower for proper Unicode case folding
-		userLower := strings.ToLower(string(userChar))
-		correctLower := strings.ToLower(string(correctChar))
-		
-		isMatch := userLower == correctLower && userExists && correctExists
+		// Compare characters (case-sensitive)
+		// This allows the diff to show case differences (e.g., "haus" vs "Haus")
+		// Note: The main validation is still case-insensitive, but the diff
+		// visualization highlights case differences to help students learn
+		isMatch := userChar == correctChar && userExists && correctExists
 		
 		// Add characters to lines with appropriate styling
 		if isMatch {
