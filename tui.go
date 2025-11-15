@@ -65,8 +65,8 @@ var (
 			Border(lipgloss.NormalBorder()).
 			BorderTop(true).
 			BorderBottom(true).
-			BorderLeft(false).
-			BorderRight(false).
+			BorderLeft(true).
+			BorderRight(true).
 			BorderForeground(lipgloss.Color("6")).  // Turquoise border
 			Foreground(lipgloss.Color("15")).       // White text
 			Bold(true).
@@ -230,109 +230,29 @@ func (m appModel) View() string {
 		return "Initializing..."
 	}
 	
-	// Build base screen: title bar + viewport content
-	var baseScreen strings.Builder
+	// If dialog is showing, display it centered (simpler approach)
+	if m.dialogState == dialogShowing {
+		dialog := m.renderDialog()
+		// Center the dialog on screen
+		return lipgloss.Place(
+			m.width, m.height,
+			lipgloss.Center, lipgloss.Center,
+			dialog,
+		)
+	}
+	
+	// Normal view: title bar + viewport
+	var s strings.Builder
 	
 	// Title bar (includes borders)
 	titleBar := m.renderTitleBar()
-	baseScreen.WriteString(titleBar)
+	s.WriteString(titleBar)
 	
-	// Content area (viewport) - always render
+	// Content area (viewport)
 	content := m.viewport.View()
-	baseScreen.WriteString(content)
+	s.WriteString(content)
 	
-	baseScreenStr := baseScreen.String()
-	
-	// Dialog overlay (if showing) - render as modal on top
-	if m.dialogState == dialogShowing {
-		dialog := m.renderDialog()
-		
-		// Create a true modal overlay by building the screen as lines
-		// and placing the dialog on top of the viewport content
-		return m.renderModalOverlay(baseScreenStr, dialog)
-	}
-	
-	return baseScreenStr
-}
-
-// renderModalOverlay creates a modal dialog overlay on top of the base screen
-func (m appModel) renderModalOverlay(baseScreen, dialog string) string {
-	// Split base screen and dialog into lines
-	baseLines := strings.Split(baseScreen, "\n")
-	dialogLines := strings.Split(dialog, "\n")
-	
-	// Ensure we have enough lines
-	for len(baseLines) < m.height {
-		baseLines = append(baseLines, strings.Repeat(" ", m.width))
-	}
-	
-	// Calculate dialog position (centered)
-	dialogHeight := len(dialogLines)
-	dialogWidth := 0
-	for _, line := range dialogLines {
-		width := lipgloss.Width(line)
-		if width > dialogWidth {
-			dialogWidth = width
-		}
-	}
-	
-	startY := (m.height - dialogHeight) / 2
-	startX := (m.width - dialogWidth) / 2
-	
-	// Create a copy of base lines to modify
-	resultLines := make([]string, len(baseLines))
-	copy(resultLines, baseLines)
-	
-	// Overlay dialog on base screen
-	for i, dialogLine := range dialogLines {
-		y := startY + i
-		if y >= 0 && y < len(resultLines) {
-			baseLine := resultLines[y]
-			
-			// Calculate how much of the dialog line fits
-			lineWidth := lipgloss.Width(dialogLine)
-			endX := startX + lineWidth
-			if endX > m.width {
-				endX = m.width
-			}
-			
-			// Build the new line: base content before dialog, dialog, base content after
-			var newLine strings.Builder
-			
-			// Part before dialog (preserve base content)
-			if startX > 0 && startX <= len(baseLine) {
-				// Get base content before dialog position (accounting for ANSI codes)
-				beforeDialog := baseLine
-				if startX < len(baseLine) {
-					// Simple approach: just take characters up to startX
-					// Note: This doesn't perfectly handle ANSI codes, but works for most cases
-					beforeDialog = baseLine[:min(startX, len(baseLine))]
-				}
-				newLine.WriteString(beforeDialog)
-			}
-			
-			// Dialog content
-			newLine.WriteString(dialogLine)
-			
-			// Part after dialog (preserve base content)
-			if endX < len(baseLine) {
-				afterDialog := baseLine[endX:]
-				newLine.WriteString(afterDialog)
-			}
-			
-			resultLines[y] = newLine.String()
-		}
-	}
-	
-	return strings.Join(resultLines, "\n")
-}
-
-// min returns the minimum of two integers
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
+	return s.String()
 }
 
 // renderTitleBar renders the title bar with progress information
