@@ -21,16 +21,39 @@ The easiest and most common way to distribute a Go CLI is via GitHub Releases wi
    - Update `owner` and `name` in the file
    - Customize as needed
 
-3. **Create a release:**
+3. **Set up GitHub authentication:**
+   GoReleaser needs a GitHub token to create releases. You have two options:
+   
+   **Option A: Personal Access Token (for local runs)**
    ```bash
-   # Test locally first
+   # Create a token at: https://github.com/settings/tokens
+   # Needs 'repo' scope (full control of private repositories)
+   export GITHUB_TOKEN=ghp_your_token_here
+   ```
+   
+   **Option B: GitHub Actions (recommended for CI/CD)**
+   - No manual token needed
+   - Uses `GITHUB_TOKEN` automatically provided by GitHub Actions
+   - More secure and automated
+
+4. **Create a release:**
+   ```bash
+   # Test locally first (creates files but doesn't upload)
    goreleaser release --snapshot
    
-   # Create a real release (requires git tag)
+   # Create a real release (requires git tag and GITHUB_TOKEN)
    git tag -a v1.0.0 -m "Release v1.0.0"
    git push origin v1.0.0
-   GORELEASER_CURRENT_TAG=v1.0.0 goreleaser release
+   goreleaser release
    ```
+   
+   **What GoReleaser does:**
+   - Builds binaries for all configured platforms (Linux, macOS, Windows)
+   - Creates archives (tar.gz, zip) with binaries and assets
+   - Generates checksums (SHA256) for verification
+   - Creates a GitHub Release (or updates existing)
+   - Uploads all artifacts to the GitHub Release
+   - Optionally creates/updates Homebrew formulas, etc.
 
 4. **Users download:**
    - Go to GitHub Releases page
@@ -194,21 +217,50 @@ For this CLI application, I recommend:
 
 ## Example Workflow
 
-```bash
-# 1. Make changes and commit
-git add .
-git commit -m "New feature"
+### Automated (Recommended - Using GitHub Actions)
 
-# 2. Tag release
-git tag -a v1.0.0 -m "Release v1.0.0"
-git push origin v1.0.0
+1. **Set up GitHub Actions workflow** (already configured in `.github/workflows/release.yml`)
 
-# 3. Create release with GoReleaser
-GORELEASER_CURRENT_TAG=v1.0.0 goreleaser release
+2. **Create and push a tag:**
+   ```bash
+   git tag -a v1.0.0 -m "Release v1.0.0"
+   git push origin v1.0.0
+   ```
 
-# 4. Update Homebrew formula (if using)
-# Update URL and SHA256 in formula
-```
+3. **GitHub Actions automatically:**
+   - Detects the tag push
+   - Runs GoReleaser
+   - Builds all binaries
+   - Creates GitHub Release
+   - Uploads all artifacts
+
+**No manual authentication needed!** GitHub Actions provides `GITHUB_TOKEN` automatically.
+
+### Manual (Local)
+
+1. **Get GitHub token:**
+   - Go to https://github.com/settings/tokens
+   - Generate new token (classic) with `repo` scope
+   - Copy the token
+
+2. **Set environment variable:**
+   ```bash
+   export GITHUB_TOKEN=ghp_your_token_here
+   ```
+
+3. **Create release:**
+   ```bash
+   git tag -a v1.0.0 -m "Release v1.0.0"
+   git push origin v1.0.0
+   goreleaser release
+   ```
+
+4. **GoReleaser will:**
+   - Build binaries for all platforms
+   - Create archives
+   - Generate checksums
+   - Create GitHub Release
+   - Upload everything automatically
 
 ## Resources
 
