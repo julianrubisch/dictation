@@ -276,7 +276,6 @@ func main() {
 	// Track progress
 	correctCount := 0
 	totalAttempts := 0
-	wordsRemaining := len(words)
 
 	// Practice words using a queue approach
 	// When a word is incorrect, it's added back to the end of the queue
@@ -286,7 +285,8 @@ func main() {
 		totalAttempts++
 
 		// Speak the word using TTS
-		fmt.Printf("\n🔊 Speaking word %d of %d...\n", i+1, wordsRemaining)
+		// Show progress: current position in queue vs total words in queue
+		fmt.Printf("\n🔊 Speaking word %d of %d...\n", i+1, len(words))
 		if err := speakWord(word); err != nil {
 			// log.Printf doesn't exit, just logs warning
 			log.Printf("Warning: Failed to speak word: %v", err)
@@ -308,7 +308,6 @@ func main() {
 		if userInput == word {
 			fmt.Println("✅ Correct! Well done!")
 			correctCount++
-			wordsRemaining--
 		} else {
 			// Show colorful feedback with visual diff to help learning
 			fmt.Println(errorStyle.Render("❌ Incorrect spelling!"))
@@ -319,7 +318,6 @@ func main() {
 			// This allows the student to practice other words first
 			// and come back to this one later
 			words = append(words, word)
-			wordsRemaining++
 		}
 	}
 
