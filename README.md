@@ -148,10 +148,10 @@ To add support for a new language:
 1. **Load Configuration**: Reads words from the YAML file
 2. **Shuffle**: Randomly shuffles the word order for each session
 3. **Practice Loop**: For each word:
-   - Uses macOS `say` command with German voice (Anna) to pronounce the word
-   - Prompts you to type the word using Huh's interactive input
+   - Uses macOS `say` command with language-specific voice to pronounce the word
+   - Prompts you to type the word using Huh's interactive input (in your configured language)
    - Validates your spelling (case-sensitive for proper capitalization)
-   - Repeats if incorrect until you get it right
+   - Shows visual diff when incorrect and adds word to end of queue for later practice
 4. **Summary**: Displays statistics about your practice session
 
 ## Text-to-Speech
