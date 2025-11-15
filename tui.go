@@ -396,10 +396,12 @@ func (m *appModel) validateInput(input string) (tea.Model, tea.Cmd) {
 		m.dialogState = dialogShowing
 	}
 	
-	// Clear input
+	// Clear input (but keep currentWord - don't clear it!)
 	m.inputText = ""
 	m.inputError = ""
 	m.showInput = false
+	// NOTE: We intentionally do NOT clear m.currentWord here
+	// It must remain available until we move to the next word
 	
 	// Return a message to notify that validation is complete
 	return m, func() tea.Msg {
