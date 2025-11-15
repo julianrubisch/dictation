@@ -247,22 +247,92 @@ func (m appModel) View() string {
 	if m.dialogState == dialogShowing {
 		dialog := m.renderDialog()
 		
-		// Create modal overlay: place dialog centered over the base screen
-		// lipgloss.Place will position the dialog on top of the content
-		// Note: In terminals, we can't have true transparency, but this creates
-		// a modal effect where the dialog appears centered over the viewport
-		modal := lipgloss.Place(
-			m.width, m.height,
-			lipgloss.Center, lipgloss.Center,
-			dialog,
-		)
-		
-		// Return the modal overlay (dialog positioned over screen)
-		// The viewport content will still be visible around/behind the dialog
-		return modal
+		// Create a true modal overlay by building the screen as lines
+		// and placing the dialog on top of the viewport content
+		return m.renderModalOverlay(baseScreenStr, dialog)
 	}
 	
 	return baseScreenStr
+}
+
+// renderModalOverlay creates a modal dialog overlay on top of the base screen
+func (m appModel) renderModalOverlay(baseScreen, dialog string) string {
+	// Split base screen and dialog into lines
+	baseLines := strings.Split(baseScreen, "\n")
+	dialogLines := strings.Split(dialog, "\n")
+	
+	// Ensure we have enough lines
+	for len(baseLines) < m.height {
+		baseLines = append(baseLines, strings.Repeat(" ", m.width))
+	}
+	
+	// Calculate dialog position (centered)
+	dialogHeight := len(dialogLines)
+	dialogWidth := 0
+	for _, line := range dialogLines {
+		width := lipgloss.Width(line)
+		if width > dialogWidth {
+			dialogWidth = width
+		}
+	}
+	
+	startY := (m.height - dialogHeight) / 2
+	startX := (m.width - dialogWidth) / 2
+	
+	// Create a copy of base lines to modify
+	resultLines := make([]string, len(baseLines))
+	copy(resultLines, baseLines)
+	
+	// Overlay dialog on base screen
+	for i, dialogLine := range dialogLines {
+		y := startY + i
+		if y >= 0 && y < len(resultLines) {
+			baseLine := resultLines[y]
+			
+			// Calculate how much of the dialog line fits
+			lineWidth := lipgloss.Width(dialogLine)
+			endX := startX + lineWidth
+			if endX > m.width {
+				endX = m.width
+			}
+			
+			// Build the new line: base content before dialog, dialog, base content after
+			var newLine strings.Builder
+			
+			// Part before dialog (preserve base content)
+			if startX > 0 && startX <= len(baseLine) {
+				// Get base content before dialog position (accounting for ANSI codes)
+				beforeDialog := baseLine
+				if startX < len(baseLine) {
+					// Simple approach: just take characters up to startX
+					// Note: This doesn't perfectly handle ANSI codes, but works for most cases
+					beforeDialog = baseLine[:min(startX, len(baseLine))]
+				}
+				newLine.WriteString(beforeDialog)
+			}
+			
+			// Dialog content
+			newLine.WriteString(dialogLine)
+			
+			// Part after dialog (preserve base content)
+			if endX < len(baseLine) {
+				afterDialog := baseLine[endX:]
+				newLine.WriteString(afterDialog)
+			}
+			
+			resultLines[y] = newLine.String()
+		}
+	}
+	
+	return strings.Join(resultLines, "\n")
+}
+
+// min returns the minimum of two integers
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
 
 // renderTitleBar renders the title bar with progress information
