@@ -51,5 +51,8 @@ other = "Gebe das Wort hier ein..."
 [ValidationError]
 other = "Bitte gib ein Wort ein"
 
+[TabHint]
+other = "💡 Drücke TAB, um die Audioausgabe zu wiederholen"
+
 [ProgressMessage]
 other = "Wort {{.Current}}: {{.Completed}} von {{.Total}} richtig geschrieben"

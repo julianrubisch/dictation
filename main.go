@@ -95,7 +95,8 @@ func main() {
 
 		// Prompt user for input with i18n localizer
 		// Note: attempt number is always 1 since we don't retry immediately
-		userInput, err := promptWord(word, 1, localizer)
+		// Pass language code for TTS when TAB is pressed
+		userInput, err := promptWord(word, 1, config.Language, localizer)
 		if err != nil {
 			log.Fatalf("Error getting input: %v", err)
 		}
